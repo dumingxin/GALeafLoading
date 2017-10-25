@@ -118,54 +118,66 @@ open class LeafLoadingView : View {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         drawProgressAndLeafs(canvas)
+        //绘制外框图片
         canvas.drawBitmap(mOuterBitmap, mOuterSrcRect, mOuterDestRect, mBitmapPaint)
         postInvalidate()
     }
 
+    /**
+     * 绘制进度和叶子
+     */
     private fun drawProgressAndLeafs(canvas: Canvas) {
         if (mProgress >= TOTAL_PROGRESS) {
             mProgress = 0
         }
         mCurrentProgressPosition = mProgressWidth * mProgress / TOTAL_PROGRESS
+        //如果当前进度对应的长度小于半径
         if (mCurrentProgressPosition < mArcRadius) {
-
+            //首先绘制一个白色的半圆
             canvas.drawArc(mArcRectF, 90F, 180F, false, mWhitePaint)
-
+            //绘制白色矩形
             mWhiteRectF.left = mArcRightLocation.toFloat()
             canvas.drawRect(mWhiteRectF, mWhitePaint)
-
+            //绘制叶子
             drawLeafs(canvas)
-
+            //绘制橙色圆弧
             val angle = Math.toDegrees(Math.acos((mArcRadius - mCurrentProgressPosition).toDouble() / mArcRadius))
-
             val startAngle = 180 - angle
             val sweepAngle = 2 * angle
             canvas.drawArc(mArcRectF, startAngle.toFloat(), sweepAngle.toFloat(), false, mOrangePaint)
         } else {
-
+            //绘制白色矩形部分
             mWhiteRectF.left = mCurrentProgressPosition.toFloat()
             canvas.drawRect(mWhiteRectF, mWhitePaint)
+            //绘制叶子
             drawLeafs(canvas)
+            //绘制橙色半圆
             canvas.drawArc(mArcRectF, 90F, 180F, false, mOrangePaint)
+            //绘制橙色矩形部分
             mOrangeRectF.left = mArcRightLocation.toFloat()
             mOrangeRectF.right = mCurrentProgressPosition.toFloat()
             canvas.drawRect(mOrangeRectF, mOrangePaint)
         }
     }
 
+    /**
+     * 绘制叶子
+     */
     private fun drawLeafs(canvas: Canvas) {
         mLeafRotateTime = if (mLeafRotateTime <= 0) LEAF_ROTATE_TIME else mLeafRotateTime
         val currentTime = System.currentTimeMillis()
         for (leaf in mLeafInfos) {
+            //当前时间大于叶子的开始时间则进行绘制
             if (currentTime > leaf.startTime && leaf.startTime != 0L) {
+                //根据时间计算叶子的位置
                 getLeafLocation(leaf, currentTime)
                 canvas.save()
                 val matrix = Matrix()
                 val transX = mLeftMargin + leaf.x
                 val transY = mLeftMargin + leaf.y
-                Log.e(TAG, "left.x = " + leaf.x + "--leaf.y=" + leaf.y);
+                //设置叶子的偏移距离
                 matrix.postTranslate(transX, transY)
-
+                //根据当前时间、叶子的开始时间和叶子的自转周期计算旋转角度
                 val rotateFraction = ((currentTime - leaf.startTime) % mLeafRotateTime).toFloat() / mLeafRotateTime
                 val angle = rotateFraction * 360
                 val rotate = if (leaf.rotateDirection == 0) angle + leaf.rotateAngle else -angle + leaf.rotateAngle
@@ -178,6 +190,9 @@ open class LeafLoadingView : View {
         }
     }
 
+    /**
+     * 根据当前时间计算叶子的位置
+     */
     private fun getLeafLocation(leaf: Leaf, currentTime: Long) {
         var intervalTime = currentTime - leaf.startTime
         mLeafFloatTime = if (mLeafFloatTime <= 0) LEAF_FLOAT_TIME else mLeafFloatTime
@@ -186,11 +201,15 @@ open class LeafLoadingView : View {
         } else if (intervalTime > mLeafFloatTime) {
             leaf.startTime = System.currentTimeMillis() + Random().nextInt(mLeafFloatTime)
         }
+        //根据当前时间和设定的叶子飞行时间计算叶子应该飞到什么位置
         val fraction = intervalTime.toFloat() / mLeafFloatTime
         leaf.x = mProgressWidth - mProgressWidth * fraction
         leaf.y = getLeafLocationY(leaf)
     }
 
+    /**
+     * 根据正弦曲线公式计算Y轴位置
+     */
     private fun getLeafLocationY(leaf: Leaf): Float {
         val w = 2 * Math.PI / mProgressWidth
         val a = when (leaf.type) {
